@@ -1,6 +1,10 @@
 import numpy as np
 
-from loss import mean_squared_error
+from loss import (
+    mean_squared_error,
+    binary_cross_entropy
+)
+
 from optimizer import Optimizer
 
 
@@ -11,7 +15,7 @@ def train_network(
     learning_rate,
     epochs,
     optimizer_name,
-    backpropagation_method="standard"
+    task
 ):
     """
     Train a neural network using:
@@ -21,18 +25,27 @@ def train_network(
     3. Backpropagation
     4. Optimizer-based parameter updates
 
-    Currently supported:
-    - Backpropagation: standard
-    - Optimizers: Gradient Descent, Momentum, Adam
+    Task:
+    - regression
+    - classification
+
+    Optimizers:
+    - Gradient Descent
+    - Momentum
+    - Adam
     """
 
     # -----------------------------------
-    # Validate backpropagation method
+    # Validate task
     # -----------------------------------
 
-    if backpropagation_method != "standard":
+    if task not in [
+        "regression",
+        "classification"
+    ]:
         raise ValueError(
-            "Currently only 'standard' backpropagation is supported"
+            "Task must be "
+            "'regression' or 'classification'"
         )
 
     history = []
@@ -69,18 +82,39 @@ def train_network(
         # 2. LOSS CALCULATION
         # =================================
 
-        loss = mean_squared_error(
-            actual_array,
-            prediction
-        )
+        if task == "regression":
+
+            loss = mean_squared_error(
+                actual_array,
+                prediction
+            )
+
+        elif task == "classification":
+
+            loss = binary_cross_entropy(
+                actual_array,
+                prediction
+            )
 
         # =================================
         # 3. LOSS GRADIENT
         # =================================
 
-        output_gradient = 2 * (
-            prediction - actual_array
-        )
+        if task == "regression":
+
+            # Derivative of mean squared error
+            output_gradient = (
+                2
+                * (prediction - actual_array)
+                / prediction.size
+            )
+
+        elif task == "classification":
+
+            # Sigmoid + Binary Cross Entropy
+            output_gradient = (
+                prediction - actual_array
+            )
 
         # =================================
         # 4. BACKPROPAGATION
@@ -189,8 +223,5 @@ def train_network(
             history,
 
         "optimizer":
-            optimizer.name,
-
-        "backpropagation":
-            backpropagation_method
+            optimizer.name
     }

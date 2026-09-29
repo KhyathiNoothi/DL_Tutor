@@ -258,7 +258,6 @@ print("\n======================================")
 print("             TRAINING...")
 print("======================================")
 
-
 result = train_network(
     network=network,
     inputs=inputs,
@@ -266,7 +265,7 @@ result = train_network(
     learning_rate=learning_rate,
     epochs=epochs,
     optimizer_name=optimizer_name,
-    
+    task=task
 )
 
 
@@ -299,10 +298,7 @@ print(
     result["optimizer"]
 )
 
-print(
-    "Backpropagation:",
-    result["backpropagation"]
-)
+
 
 
 # ======================================
