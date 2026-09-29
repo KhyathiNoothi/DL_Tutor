@@ -19,3 +19,21 @@ def update_parameters(
         "weights": new_weights,
         "biases": new_biases
     }
+
+
+def update_kernel(
+    kernel,
+    kernel_gradient,
+    learning_rate
+):
+    kernel = np.array(kernel, dtype=float)
+    kernel_gradient = np.array(kernel_gradient, dtype=float)
+
+    if kernel.shape != kernel_gradient.shape:
+        raise ValueError(
+            "Kernel and kernel gradient must have the same shape"
+        )
+
+    new_kernel = kernel - learning_rate * kernel_gradient
+
+    return new_kernel
