@@ -1,25 +1,11 @@
-import os
-import sys
-
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
+from ann.network import NeuralNetwork
+from ann.training import train_network
 
-# --------------------------------------------------
-# Make the ann folder available for imports
-# --------------------------------------------------
-
-ANN_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "ann"
-)
-
-if ANN_PATH not in sys.path:
-    sys.path.append(ANN_PATH)
-
-
-from network import NeuralNetwork
-from training import train_network
+from cnn.network import CNN
+from cnn.training import train_cnn as train_cnn_model
 
 
 # --------------------------------------------------
@@ -85,10 +71,6 @@ class ANNTrainRequest(BaseModel):
 @app.post("/ann/train")
 def train_ann(request: ANNTrainRequest):
 
-    # ------------------------------------------------
-    # Validate task
-    # ------------------------------------------------
-
     if request.task not in [
         "classification",
         "regression"
@@ -100,11 +82,6 @@ def train_ann(request: ANNTrainRequest):
                 "'classification' or 'regression'"
             )
         }
-
-
-    # ------------------------------------------------
-    # Validate hidden activation
-    # ------------------------------------------------
 
     if request.hidden_activation not in [
         "relu",
@@ -118,11 +95,6 @@ def train_ann(request: ANNTrainRequest):
                 "'relu', 'sigmoid', or 'tanh'"
             )
         }
-
-
-    # ------------------------------------------------
-    # Validate optimizer
-    # ------------------------------------------------
 
     if request.optimizer not in [
         "gradient_descent",
@@ -138,21 +110,11 @@ def train_ann(request: ANNTrainRequest):
             )
         }
 
-
-    # ------------------------------------------------
-    # Validate input size
-    # ------------------------------------------------
-
     if len(request.inputs) == 0:
 
         return {
             "error": "At least one input is required"
         }
-
-
-    # ------------------------------------------------
-    # Validate target size
-    # ------------------------------------------------
 
     if len(request.target) != request.output_neurons:
 
@@ -163,11 +125,6 @@ def train_ann(request: ANNTrainRequest):
             )
         }
 
-
-    # ------------------------------------------------
-    # Choose output activation automatically
-    # ------------------------------------------------
-
     if request.task == "classification":
 
         output_activation = "sigmoid"
@@ -176,17 +133,7 @@ def train_ann(request: ANNTrainRequest):
 
         output_activation = "linear"
 
-
-    # ------------------------------------------------
-    # Create neural network
-    # ------------------------------------------------
-
     network = NeuralNetwork()
-
-
-    # ------------------------------------------------
-    # Add hidden layer
-    # ------------------------------------------------
 
     network.add_layer(
         input_size=len(request.inputs),
@@ -194,21 +141,11 @@ def train_ann(request: ANNTrainRequest):
         activation=request.hidden_activation
     )
 
-
-    # ------------------------------------------------
-    # Add output layer
-    # ------------------------------------------------
-
     network.add_layer(
         input_size=request.hidden_neurons,
         neuron_count=request.output_neurons,
         activation=output_activation
     )
-
-
-    # ------------------------------------------------
-    # Train network
-    # ------------------------------------------------
 
     result = train_network(
         network=network,
@@ -216,15 +153,12 @@ def train_ann(request: ANNTrainRequest):
         actual=request.target,
         learning_rate=request.learning_rate,
         epochs=request.epochs,
-        optimizer_name=request.optimizer
+        optimizer_name=request.optimizer,
+        task=request.task
     )
 
-
-    # ------------------------------------------------
-    # Return result
-    # ------------------------------------------------
-
     return {
+
         "task": request.task,
 
         "inputs": request.inputs,
@@ -255,6 +189,132 @@ def train_ann(request: ANNTrainRequest):
 
         "final_prediction":
             result["final_output"],
+
+        "final_loss":
+            result["final_loss"],
+
+        "history":
+            result["history"]
+    }
+
+
+# ==================================================
+# CNN TRAINING REQUEST
+# ==================================================
+
+class CNNTrainRequest(BaseModel):
+
+    image: list[list[float]]
+
+    kernels: list[list[list[float]]]
+
+    stride: int = Field(
+        default=1,
+        gt=0
+    )
+
+    padding: int = Field(
+        default=0,
+        ge=0
+    )
+
+    pool_size: int = Field(
+        default=2,
+        gt=0
+    )
+
+    pool_stride: int = Field(
+        default=2,
+        gt=0
+    )
+
+    target: float
+
+    learning_rate: float = Field(
+        gt=0
+    )
+
+    epochs: int = Field(
+        gt=0
+    )
+
+
+# ==================================================
+# CNN TRAINING ENDPOINT
+# ==================================================
+
+@app.post("/cnn/train")
+def train_cnn_endpoint(request: CNNTrainRequest):
+
+    if request.target not in [0, 1]:
+
+        return {
+            "error": "Target must be 0 or 1"
+        }
+
+    if len(request.image) == 0:
+
+        return {
+            "error": "Image cannot be empty"
+        }
+
+    if len(request.kernels) == 0:
+
+        return {
+            "error": "At least one kernel is required"
+        }
+
+    cnn = CNN(
+        kernels=request.kernels,
+        pool_size=request.pool_size,
+        pool_stride=request.pool_stride,
+        dense_output_size=1,
+        dense_activation="linear"
+    )
+
+    result = train_cnn_model(
+        cnn=cnn,
+        image=request.image,
+        target=request.target,
+        learning_rate=request.learning_rate,
+        epochs=request.epochs,
+        stride=request.stride,
+        padding=request.padding
+    )
+
+    return {
+
+        "task": "binary_classification",
+
+        "image":
+            request.image,
+
+        "kernels":
+            request.kernels,
+
+        "stride":
+            request.stride,
+
+        "padding":
+            request.padding,
+
+        "pool_size":
+            request.pool_size,
+
+        "pool_stride":
+            request.pool_stride,
+
+        "target":
+            request.target,
+
+        "learning_rate":
+            request.learning_rate,
+
+        "epochs":
+            request.epochs,
+
+        "final_probability":
+            result["final_probability"],
 
         "final_loss":
             result["final_loss"],
