@@ -17,7 +17,7 @@ targets = [
 
 
 learning_rate = 0.1
-epochs = 5
+epochs = 50
 
 
 result = train_text_dataset(

@@ -14,20 +14,24 @@ class RNNCell:
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-        # Input → Hidden weights
-        self.Wxh = (
-            np.random.randn(
-                input_size,
-                hidden_size
-            ) * 0.01
+        limit_xh = np.sqrt(
+            6 / (input_size + hidden_size)
         )
 
-        # Previous Hidden → Current Hidden weights
-        self.Whh = (
-            np.random.randn(
-                hidden_size,
-                hidden_size
-            ) * 0.01
+        limit_hh = np.sqrt(
+            6 / (hidden_size + hidden_size)
+        )
+
+        self.Wxh = np.random.uniform(
+            -limit_xh,
+            limit_xh,
+            (input_size, hidden_size)
+        )
+
+        self.Whh = np.random.uniform(
+            -limit_hh,
+            limit_hh,
+            (hidden_size, hidden_size)
         )
 
         # Hidden bias

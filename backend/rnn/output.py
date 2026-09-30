@@ -10,8 +10,14 @@ class RNNOutputLayer:
         self.hidden_size = hidden_size
 
         # Hidden state → output weight
-        self.weights = (
-            np.random.randn(hidden_size) * 0.01
+        limit = np.sqrt(
+            6 / (hidden_size + 1)
+        )
+
+        self.weights = np.random.uniform(
+            -limit,
+            limit,
+            hidden_size
         )
 
         # Output bias
