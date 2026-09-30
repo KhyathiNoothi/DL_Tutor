@@ -1,11 +1,10 @@
 import numpy as np
 
-from loss import binary_cross_entropy
-from activation import relu_backward
-from pooling import max_pooling_backward
-from convolution import convolution_backward
-from optimizer import update_parameters, update_kernel
-
+from .loss import binary_cross_entropy
+from .activation import relu_backward
+from .pooling import max_pooling_backward
+from .convolution import convolution_backward
+from .optimizer import update_parameters, update_kernel
 
 def train_cnn(
     cnn,

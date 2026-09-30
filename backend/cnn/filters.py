@@ -1,5 +1,5 @@
 import numpy as np
-from convolution import convolution2d
+from .convolution import convolution2d
 
 
 def apply_multiple_filters(image, kernels, stride=1, padding=0):

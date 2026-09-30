@@ -1,11 +1,11 @@
 import numpy as np
 
-from filters import apply_multiple_filters
-from activation import relu
-from pooling import max_pooling2d
-from flatten import flatten
-from dense import DenseLayer
-from prediction import predict_binary, predict_multiclass
+from .filters import apply_multiple_filters
+from .activation import relu
+from .pooling import max_pooling2d
+from .flatten import flatten
+from .dense import DenseLayer
+from .prediction import predict_binary, predict_multiclass
 
 
 class CNN:
