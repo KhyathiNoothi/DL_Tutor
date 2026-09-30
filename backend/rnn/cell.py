@@ -1,0 +1,92 @@
+import numpy as np
+
+from .activation import tanh
+
+
+class RNNCell:
+
+    def __init__(
+        self,
+        input_size,
+        hidden_size
+    ):
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        # Input → Hidden weights
+        self.Wxh = (
+            np.random.randn(
+                input_size,
+                hidden_size
+            ) * 0.01
+        )
+
+        # Previous Hidden → Current Hidden weights
+        self.Whh = (
+            np.random.randn(
+                hidden_size,
+                hidden_size
+            ) * 0.01
+        )
+
+        # Hidden bias
+        self.bh = np.zeros(hidden_size)
+
+
+    def forward(
+        self,
+        x,
+        previous_hidden
+    ):
+
+        x = np.array(
+            x,
+            dtype=float
+        )
+
+        previous_hidden = np.array(
+            previous_hidden,
+            dtype=float
+        )
+
+        if len(x) != self.input_size:
+
+            raise ValueError(
+                "Input size does not match input_size"
+            )
+
+        if len(previous_hidden) != self.hidden_size:
+
+            raise ValueError(
+                "Hidden state size does not match hidden_size"
+            )
+
+        # Input contribution
+        input_contribution = np.dot(
+            x,
+            self.Wxh
+        )
+
+        # Previous hidden-state contribution
+        hidden_contribution = np.dot(
+            previous_hidden,
+            self.Whh
+        )
+
+        # Weighted sum
+        z = (
+            input_contribution
+            + hidden_contribution
+            + self.bh
+        )
+
+        # New hidden state
+        hidden = tanh(z)
+
+        return {
+            "input": x,
+            "previous_hidden": previous_hidden,
+            "weighted_sum": z,
+            "hidden": hidden
+        }
