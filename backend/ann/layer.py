@@ -1,6 +1,6 @@
 import numpy as np
 
-from activations import (
+from .activations import (
     relu,
     sigmoid,
     tanh,

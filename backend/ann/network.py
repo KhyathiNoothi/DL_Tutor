@@ -1,7 +1,7 @@
 import numpy as np
 
-from layer import DenseLayer
-from backprop import calculate_layer_gradients
+from .layer import DenseLayer
+from .backprop import calculate_layer_gradients
 
 
 class NeuralNetwork:

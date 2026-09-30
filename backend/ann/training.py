@@ -1,11 +1,11 @@
 import numpy as np
 
-from loss import (
+from .loss import (
     mean_squared_error,
     binary_cross_entropy
 )
 
-from optimizer import Optimizer
+from .optimizer import Optimizer
 
 
 def train_network(
