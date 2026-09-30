@@ -1,7 +1,5 @@
 import numpy as np
 
-from .activation import tanh
-
 
 def bptt(
     cell,
@@ -11,77 +9,52 @@ def bptt(
     target,
     probability
 ):
-    """
-    Backpropagation Through Time (BPTT).
-
-    Calculates gradients for:
-
-        Wxh
-        Whh
-        bh
-        Why
-        by
-    """
-
-    sequence = np.array(
-        sequence,
-        dtype=float
-    )
-
+    sequence = np.array(sequence, dtype=float)
     target = float(target)
     probability = float(probability)
 
-    # --------------------------------------------------
-    # Sigmoid + Binary Cross Entropy
-    #
-    # dL/dlogit = prediction - target
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # 1. Gradient of BCE + Sigmoid
+    # -------------------------------------------------
 
     dL_dlogit = probability - target
 
-    # --------------------------------------------------
-    # Output layer gradients
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # 2. Output layer gradients
+    # -------------------------------------------------
 
     final_hidden = np.array(
         forward_history[-1]["hidden"],
         dtype=float
     )
 
-    dL_dWhy = (
-        final_hidden * dL_dlogit
-    )
-
+    dL_dWhy = final_hidden * dL_dlogit
     dL_dby = dL_dlogit
 
-    # Gradient flowing back into final hidden state
-    dh_next = (
-        output_layer.weights * dL_dlogit
-    )
+    # Gradient flowing from output layer
+    # into the final hidden state
+    dh_next = output_layer.weights * dL_dlogit
 
-    # --------------------------------------------------
-    # Initialize RNN gradients
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # 3. Initialize RNN gradients
+    # -------------------------------------------------
 
-    dL_dWxh = np.zeros_like(
-        cell.Wxh
-    )
+    dL_dWxh = np.zeros_like(cell.Wxh)
+    dL_dWhh = np.zeros_like(cell.Whh)
+    dL_dbh = np.zeros_like(cell.bh)
 
-    dL_dWhh = np.zeros_like(
-        cell.Whh
-    )
+    # -------------------------------------------------
+    # 4. NEW:
+    # Gradient for every input vector
+    # -------------------------------------------------
 
-    dL_dbh = np.zeros_like(
-        cell.bh
-    )
+    dL_dinputs = np.zeros_like(sequence)
 
-    # --------------------------------------------------
-    # Backpropagate through time
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # 5. Backpropagation Through Time
+    # -------------------------------------------------
 
-    for time_step in reversed(
-        range(len(sequence))
-    ):
+    for time_step in reversed(range(len(sequence))):
 
         step = forward_history[time_step]
 
@@ -110,44 +83,71 @@ def bptt(
             dh_next * tanh_derivative
         )
 
-        # --------------------------------------------------
-        # Gradients for input → hidden weights
-        # --------------------------------------------------
+        # -------------------------------------------------
+        # Gradient for Wxh
+        # -------------------------------------------------
 
         dL_dWxh += np.outer(
             x,
             dL_dz
         )
 
-        # --------------------------------------------------
-        # Gradients for hidden → hidden weights
-        # --------------------------------------------------
+        # -------------------------------------------------
+        # Gradient for Whh
+        # -------------------------------------------------
 
         dL_dWhh += np.outer(
             previous_hidden,
             dL_dz
         )
 
-        # --------------------------------------------------
-        # Gradient for hidden bias
-        # --------------------------------------------------
+        # -------------------------------------------------
+        # Gradient for bias
+        # -------------------------------------------------
 
         dL_dbh += dL_dz
 
-        # --------------------------------------------------
-        # Send gradient to previous hidden state
-        # --------------------------------------------------
+        # -------------------------------------------------
+        # NEW:
+        # Gradient with respect to current input x
+        #
+        # z = x @ Wxh + h_previous @ Whh + bh
+        #
+        # Therefore:
+        #
+        # dL/dx = dL/dz @ Wxh.T
+        # -------------------------------------------------
+
+        dL_dx = np.dot(
+            dL_dz,
+            cell.Wxh.T
+        )
+
+        dL_dinputs[time_step] = dL_dx
+
+        # -------------------------------------------------
+        # Pass gradient backward through time
+        # -------------------------------------------------
 
         dh_next = np.dot(
             cell.Whh,
             dL_dz
         )
 
+    # -------------------------------------------------
+    # 6. Return all gradients
+    # -------------------------------------------------
+
     return {
         "dL_dWxh": dL_dWxh.tolist(),
         "dL_dWhh": dL_dWhh.tolist(),
         "dL_dbh": dL_dbh.tolist(),
+
         "dL_dWhy": dL_dWhy.tolist(),
         "dL_dby": float(dL_dby),
-        "dL_dlogit": float(dL_dlogit)
+
+        "dL_dlogit": float(dL_dlogit),
+
+        # NEW
+        "dL_dinputs": dL_dinputs.tolist()
     }

@@ -165,3 +165,20 @@ print("\ndL/dlogit:")
 print(
     gradients["dL_dlogit"]
 )
+
+
+# --------------------------------------------------
+# NEW:
+# Gradient with respect to each input
+# --------------------------------------------------
+
+print("\ndL/dinputs:")
+
+for time_step, gradient in enumerate(
+    gradients["dL_dinputs"]
+):
+
+    print(
+        f"Time Step {time_step + 1}: "
+        f"{gradient}"
+    )
