@@ -442,12 +442,4 @@ def predict_rnn_endpoint(request: RNNPredictRequest):
         model=trained_rnn["model"]
     )
 
-    return {
-        "text": result["text"],
-        "tokens": result["tokens"],
-        "token_ids": result["token_ids"],
-        "probability": result["probability"],
-        "prediction": result["prediction"],
-        "label": result["label"],
-        "forward_history": result["forward_history"]
-    }
+    
