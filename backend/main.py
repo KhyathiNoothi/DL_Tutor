@@ -550,11 +550,14 @@ def predict_rnn_endpoint(request: RNNPredictRequest):
     )
 
     return {
-        "text": result["text"],
-        "tokens": result["tokens"],
-        "token_ids": result["token_ids"],
-        "probability": result["probability"],
-        "prediction": result["prediction"],
-        "label": result["label"],
-        "forward_history": result["forward_history"]
-    }
+    "text": result["text"],
+    "tokens": result["tokens"],
+    "token_ids": result["token_ids"],
+    "embeddings": result["embeddings"],
+    "forward_history": result["forward_history"],
+    "final_hidden": result["final_hidden"],
+    "logit": result["logit"],
+    "probability": result["probability"],
+    "prediction": result["prediction"],
+    "label": result["label"]
+}

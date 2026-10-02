@@ -45,10 +45,6 @@ def train_text_dataset(
     Update RNN + Embedding
     """
 
-    # -----------------------------------------
-    # Validation
-    # -----------------------------------------
-
     if len(texts) != len(targets):
         raise ValueError(
             "Number of texts must match number of targets"
@@ -69,10 +65,6 @@ def train_text_dataset(
             "Epochs must be greater than 0"
         )
 
-    # -----------------------------------------
-    # Build vocabulary
-    # -----------------------------------------
-
     vocabulary = Vocabulary()
 
     tokenized_texts = []
@@ -90,45 +82,25 @@ def train_text_dataset(
 
         vocabulary.build(tokens)
 
-    # -----------------------------------------
-    # Create embedding layer
-    # -----------------------------------------
-
     embedding = Embedding(
         vocabulary_size=vocabulary.size(),
         embedding_size=embedding_size
     )
-
-    # -----------------------------------------
-    # Create ONE persistent RNN model
-    # -----------------------------------------
 
     model = RNNModel(
         input_size=embedding_size,
         hidden_size=hidden_size
     )
 
-    # -----------------------------------------
-    # Initial hidden state
-    # -----------------------------------------
-
     initial_hidden = np.zeros(hidden_size)
 
     history = []
-
-    # =========================================
-    # EPOCH LOOP
-    # =========================================
 
     for epoch in range(epochs):
 
         epoch_loss = 0.0
 
         sample_history = []
-
-        # =====================================
-        # SAMPLE LOOP
-        # =====================================
 
         for index in range(len(texts)):
 
@@ -137,23 +109,11 @@ def train_text_dataset(
 
             tokens = tokenized_texts[index]
 
-            # ---------------------------------
-            # 1. Words → Token IDs
-            # ---------------------------------
-
             token_ids = vocabulary.encode(tokens)
-
-            # ---------------------------------
-            # 2. Token IDs → Embeddings
-            # ---------------------------------
 
             sequence = embedding.forward(
                 token_ids
             )
-
-            # ---------------------------------
-            # 3. RNN Forward Pass
-            # ---------------------------------
 
             forward_result = model.forward(
                 sequence=sequence,
@@ -165,10 +125,6 @@ def train_text_dataset(
                 dtype=float
             )
 
-            # ---------------------------------
-            # 4. Output Layer
-            # ---------------------------------
-
             output_result = model.output_layer.forward(
                 final_hidden
             )
@@ -176,18 +132,10 @@ def train_text_dataset(
             probability = output_result["probability"]
             logit = output_result["logit"]
 
-            # ---------------------------------
-            # 5. Loss
-            # ---------------------------------
-
             loss = binary_cross_entropy(
                 [target],
                 [probability]
             )
-
-            # ---------------------------------
-            # 6. BPTT
-            # ---------------------------------
 
             gradients = bptt(
                 cell=model.cell,
@@ -198,20 +146,12 @@ def train_text_dataset(
                 probability=probability
             )
 
-            # ---------------------------------
-            # 7. Save old RNN parameters
-            # ---------------------------------
-
             old_Wxh = model.cell.Wxh.copy()
             old_Whh = model.cell.Whh.copy()
             old_bh = model.cell.bh.copy()
 
             old_Why = model.output_layer.weights.copy()
             old_by = model.output_layer.bias
-
-            # ---------------------------------
-            # 8. Update RNN + Output Layer
-            # ---------------------------------
 
             updated_parameters = update_parameters(
                 Wxh=model.cell.Wxh,
@@ -229,10 +169,6 @@ def train_text_dataset(
                 learning_rate=learning_rate
             )
 
-            # ---------------------------------
-            # Apply RNN updates
-            # ---------------------------------
-
             model.cell.Wxh = updated_parameters["Wxh"]
             model.cell.Whh = updated_parameters["Whh"]
             model.cell.bh = updated_parameters["bh"]
@@ -245,39 +181,58 @@ def train_text_dataset(
                 updated_parameters["by"]
             )
 
-            # ---------------------------------
-            # 9. NEW:
-            # Update Embedding Layer
-            # ---------------------------------
-
             embedding_gradients = embedding.backward(
                 token_ids=token_ids,
                 dL_dinputs=gradients["dL_dinputs"],
                 learning_rate=learning_rate
             )
 
-            # ---------------------------------
-            # Accumulate loss
-            # ---------------------------------
-
             epoch_loss += loss
-
-            # ---------------------------------
-            # Store sample history
-            # ---------------------------------
 
             sample_history.append({
                 "text": text,
                 "tokens": tokens,
                 "token_ids": token_ids,
+
+                "embeddings": sequence.tolist(),
+
                 "target": target,
                 "logit": float(logit),
                 "probability": float(probability),
                 "loss": float(loss),
 
-                "input_gradients": gradients[
-                    "dL_dinputs"
-                ],
+                "forward_history": forward_result["history"],
+
+                "final_hidden": final_hidden.tolist(),
+
+                "backward_history":
+                    gradients["backward_history"],
+
+                "gradients": {
+                    "dL_dlogit":
+                        float(gradients["dL_dlogit"]),
+
+                    "dL_dWhy":
+                        gradients["dL_dWhy"],
+
+                    "dL_dby":
+                        float(gradients["dL_dby"]),
+
+                    "dL_dWxh":
+                        gradients["dL_dWxh"],
+
+                    "dL_dWhh":
+                        gradients["dL_dWhh"],
+
+                    "dL_dbh":
+                        gradients["dL_dbh"],
+
+                    "dL_dinputs":
+                        gradients["dL_dinputs"]
+                },
+
+                "input_gradients":
+                    gradients["dL_dinputs"],
 
                 "embedding_gradients":
                     embedding_gradients.tolist(),
@@ -299,10 +254,6 @@ def train_text_dataset(
                 }
             })
 
-        # =====================================
-        # Average loss for epoch
-        # =====================================
-
         average_loss = (
             epoch_loss / len(texts)
         )
@@ -320,14 +271,10 @@ def train_text_dataset(
             f"Average Loss: {average_loss:.6f}"
         )
 
-    # =========================================
-    # Final result
-    # =========================================
-
     return {
-    "vocabulary": vocabulary,
-    "final_loss": float(average_loss),
-    "model": model,
-    "embedding": embedding,
-    "history": history
-}
+        "vocabulary": vocabulary,
+        "final_loss": float(average_loss),
+        "model": model,
+        "embedding": embedding,
+        "history": history
+    }

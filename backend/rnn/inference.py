@@ -83,11 +83,17 @@ def predict_text(
         label = "Negative"
 
     return {
-        "text": text,
-        "tokens": tokens,
-        "token_ids": token_ids,
-        "probability": probability,
-        "prediction": prediction,
-        "label": label,
-        "forward_history": result["forward_history"]
-    }
+    "text": text,
+    "tokens": tokens,
+    "token_ids": token_ids,
+    "embeddings": sequence.tolist(),
+    "final_hidden": np.array(
+        result["final_hidden"],
+        dtype=float
+    ).tolist(),
+    "logit": float(result["logit"]),
+    "probability": probability,
+    "prediction": prediction,
+    "label": label,
+    "forward_history": result["forward_history"]
+} 
