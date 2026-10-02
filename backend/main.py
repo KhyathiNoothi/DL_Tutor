@@ -4,11 +4,11 @@ from pydantic import BaseModel, Field
 from ann.network import NeuralNetwork
 from ann.training import train_network
 
-from backend.cnn import network
 from cnn.network import CNN
 from cnn.training import train_cnn as train_cnn_model
 from rnn.text_training_model import train_text_dataset
 from rnn.inference import predict_text
+import numpy as np
 
 
 # --------------------------------------------------
@@ -39,6 +39,20 @@ def home():
 # ==================================================
 # ANN TRAINING REQUEST
 # ==================================================
+def convert_numpy(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, dict):
+        return {key: convert_numpy(value) for key, value in obj.items()}
+    if isinstance(obj, list):
+        return [convert_numpy(value) for value in obj]
+    if isinstance(obj, tuple):
+        return [convert_numpy(value) for value in obj]
+    return obj
 
 class ANNTrainRequest(BaseModel):
 
@@ -396,16 +410,11 @@ class CNNPredictRequest(BaseModel):
 def predict_cnn(request: CNNPredictRequest):
 
     if trained_cnn is None:
-
         return {
-            "error": (
-                "CNN has not been trained yet. "
-                "Train the CNN first."
-            )
+            "error": "CNN has not been trained yet. Train the CNN first."
         }
 
     if len(request.image) == 0:
-
         return {
             "error": "Image cannot be empty"
         }
@@ -420,7 +429,7 @@ def predict_cnn(request: CNNPredictRequest):
         "image": request.image,
         "stride": request.stride,
         "padding": request.padding,
-        "prediction": result
+        "prediction": convert_numpy(result)
     }
 # ==================================================
 # RNN TRAINING REQUEST
