@@ -6,6 +6,8 @@ from ann.training import train_network
 
 from cnn.network import CNN
 from cnn.training import train_cnn as train_cnn_model
+from rnn.text_training_model import train_text_dataset
+from rnn.inference import predict_text
 
 
 # --------------------------------------------------
@@ -18,7 +20,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
+trained_rnn = None
 # --------------------------------------------------
 # Home endpoint
 # --------------------------------------------------
@@ -321,4 +323,131 @@ def train_cnn_endpoint(request: CNNTrainRequest):
 
         "history":
             result["history"]
+    }
+# ==================================================
+# RNN TRAINING REQUEST
+# ==================================================
+
+class RNNTrainRequest(BaseModel):
+
+    texts: list[str]
+
+    targets: list[float]
+
+    learning_rate: float = Field(
+        gt=0
+    )
+
+    epochs: int = Field(
+        gt=0
+    )
+
+    hidden_size: int = Field(
+        gt=0
+    )
+
+    embedding_size: int = Field(
+        gt=0
+    )
+
+
+# ==================================================
+# RNN PREDICTION REQUEST
+# ==================================================
+
+class RNNPredictRequest(BaseModel):
+
+    text: str
+# ==================================================
+# RNN TRAINING ENDPOINT
+# ==================================================
+
+@app.post("/rnn/train")
+def train_rnn_endpoint(request: RNNTrainRequest):
+
+    global trained_rnn
+
+    if len(request.texts) == 0:
+        return {
+            "error": "At least one training text is required"
+        }
+
+    if len(request.texts) != len(request.targets):
+        return {
+            "error": (
+                "Number of texts must match "
+                "number of targets"
+            )
+        }
+
+    for target in request.targets:
+
+        if target not in [0, 1]:
+            return {
+                "error": "Targets must be 0 or 1"
+            }
+
+    result = train_text_dataset(
+        texts=request.texts,
+        targets=request.targets,
+        learning_rate=request.learning_rate,
+        epochs=request.epochs,
+        hidden_size=request.hidden_size,
+        embedding_size=request.embedding_size
+    )
+
+    trained_rnn = result
+
+    return {
+        "task": "text_binary_classification",
+
+        "texts": request.texts,
+
+        "targets": request.targets,
+
+        "learning_rate": request.learning_rate,
+
+        "epochs": request.epochs,
+
+        "hidden_size": request.hidden_size,
+
+        "embedding_size": request.embedding_size,
+
+        "vocabulary": result["vocabulary"].word_to_id,
+
+        "final_loss": result["final_loss"],
+
+        "history": result["history"]
+    }
+# ==================================================
+# RNN PREDICTION ENDPOINT
+# ==================================================
+
+@app.post("/rnn/predict")
+def predict_rnn_endpoint(request: RNNPredictRequest):
+
+    if trained_rnn is None:
+
+        return {
+            "error": (
+                "RNN has not been trained yet. "
+                "Train the RNN first."
+            )
+        }
+
+    result = predict_text(
+        text=request.text,
+        vocabulary=trained_rnn["vocabulary"],
+        embedding=trained_rnn["embedding"],
+        model=trained_rnn["model"]
+    )
+
+    return {
+        "text": result["text"],
+        "tokens": result["tokens"],
+        "token_ids": result["token_ids"],
+        "probability": result["probability"],
+        "prediction": result["prediction"],
+        "label": result["label"],
+        "forward_history": result["forward_history"]
     }
