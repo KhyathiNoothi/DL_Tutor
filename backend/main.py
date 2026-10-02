@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from ann.network import NeuralNetwork
 from ann.training import train_network
 
+from backend.cnn import network
 from cnn.network import CNN
 from cnn.training import train_cnn as train_cnn_model
 from rnn.text_training_model import train_text_dataset
@@ -20,6 +21,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
+trained_ann = None
+trained_cnn = None
 trained_rnn = None
 # --------------------------------------------------
 # Home endpoint
@@ -72,6 +75,8 @@ class ANNTrainRequest(BaseModel):
 
 @app.post("/ann/train")
 def train_ann(request: ANNTrainRequest):
+
+    global trained_ann
 
     if request.task not in [
         "classification",
@@ -158,7 +163,7 @@ def train_ann(request: ANNTrainRequest):
         optimizer_name=request.optimizer,
         task=request.task
     )
-
+    trained_ann = network
     return {
 
         "task": request.task,
@@ -199,7 +204,44 @@ def train_ann(request: ANNTrainRequest):
             result["history"]
     }
 
+    # ==================================================
+# ANN PREDICTION REQUEST
+# ==================================================
 
+class ANNPredictRequest(BaseModel):
+
+    inputs: list[float]
+
+
+# ==================================================
+# ANN PREDICTION ENDPOINT
+# ==================================================
+
+@app.post("/ann/predict")
+def predict_ann(request: ANNPredictRequest):
+
+    if trained_ann is None:
+
+        return {
+            "error": (
+                "ANN has not been trained yet. "
+                "Train the ANN first."
+            )
+        }
+
+    if len(request.inputs) == 0:
+
+        return {
+            "error": "At least one input is required"
+        }
+
+    result = trained_ann.forward(request.inputs)
+
+    return {
+        "inputs": request.inputs,
+        "prediction": result["final_output"],
+        "forward": result
+    }
 # ==================================================
 # CNN TRAINING REQUEST
 # ==================================================
@@ -248,6 +290,8 @@ class CNNTrainRequest(BaseModel):
 @app.post("/cnn/train")
 def train_cnn_endpoint(request: CNNTrainRequest):
 
+    global trained_cnn
+
     if request.target not in [0, 1]:
 
         return {
@@ -283,7 +327,7 @@ def train_cnn_endpoint(request: CNNTrainRequest):
         stride=request.stride,
         padding=request.padding
     )
-
+    trained_cnn = cnn
     return {
 
         "task": "binary_classification",
@@ -323,6 +367,60 @@ def train_cnn_endpoint(request: CNNTrainRequest):
 
         "history":
             result["history"]
+    }
+
+    # ==================================================
+# CNN PREDICTION REQUEST
+# ==================================================
+
+class CNNPredictRequest(BaseModel):
+
+    image: list[list[float]]
+
+    stride: int = Field(
+        default=1,
+        gt=0
+    )
+
+    padding: int = Field(
+        default=0,
+        ge=0
+    )
+
+
+# ==================================================
+# CNN PREDICTION ENDPOINT
+# ==================================================
+
+@app.post("/cnn/predict")
+def predict_cnn(request: CNNPredictRequest):
+
+    if trained_cnn is None:
+
+        return {
+            "error": (
+                "CNN has not been trained yet. "
+                "Train the CNN first."
+            )
+        }
+
+    if len(request.image) == 0:
+
+        return {
+            "error": "Image cannot be empty"
+        }
+
+    result = trained_cnn.forward(
+        image=request.image,
+        stride=request.stride,
+        padding=request.padding
+    )
+
+    return {
+        "image": request.image,
+        "stride": request.stride,
+        "padding": request.padding,
+        "prediction": result
     }
 # ==================================================
 # RNN TRAINING REQUEST
